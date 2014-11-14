@@ -1,5 +1,6 @@
 #include <msp430.h>
 #include <string.h>
+#include <math.h>
 
 unsigned int res[2]; //for holding the results
 int main(void)
@@ -167,13 +168,13 @@ void send_blocks(unsigned int res_[2])
     {
         if (i<6)
         	{
-        	buf_0 += temp_0%2;
-        	buf_2 += temp_1%2;
+        	buf_0 += temp_0%2*(int)pow(2,i);
+        	buf_2 += temp_1%2*(int)pow(2,i);
         	}
         else
         {
-        	buf_1 += temp_0%2;
-        	buf_3 += temp_1%2;
+        	buf_1 += temp_0%2*(int)pow(2,i-6);
+        	buf_3 += temp_1%2*(int)pow(2,i-6);
         }
         temp_0 /= 2;
         temp_1 /= 2;
