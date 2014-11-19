@@ -2,7 +2,7 @@
 #include <string.h>
 #include <math.h>
 
-unsigned int res[2]; //for holding the results
+unsigned int res[2] = {0}; //for holding the results
 int main(void)
 {
   reset();
@@ -14,7 +14,7 @@ int main(void)
   {
     ADC10CTL0 &= ~ENC;
     while (ADC10CTL1 & BUSY);               // Wait if ADC10 core is active
-    ADC10SA = (int)res;                     // Data buffer start
+    ADC10SA = (unsigned int)res;                     // Data buffer start
     P1OUT |= 0x01;                          // Set P1.0 LED on
     ADC10CTL0 |= ENC + ADC10SC;             // Sampling and conversion start
     __bis_SR_register(CPUOFF + GIE);        // LPM0, ADC10_ISR will force exit
@@ -32,7 +32,9 @@ void __attribute__ ((interrupt(ADC10_VECTOR))) ADC10_ISR (void)
 #error Compiler not supported!
 #endif
 {
-    send_blocks(res);
+    //send_blocks(res);
+    //send_blocks_dbg(res);
+	UARTWriteRes(res);
 	__bic_SR_register_on_exit(CPUOFF);        // Clear CPUOFF bit from 0(SR)
 }
 
@@ -57,11 +59,14 @@ void setup_ADC(void)
 {
 	ADC10CTL0 &= ~ENC;						  // Disable sampling
 	ADC10CTL1 = INCH_1 + CONSEQ_3;            // Repeat multiple channels, channels 0 and 1 selected
-	ADC10CTL0 = ADC10SHT_2 + MSC + REFON + REF2_5V + SREF_1 + ADC10ON + ADC10IE; // ADC10ON, interrupt enable, reference voltage 2.5V, multiple conversion
+	//ADC10CTL0 = ADC10SHT_3 + MSC + REFON + REF2_5V + SREF_1 + ADC10ON + ADC10IE; // ADC10ON, interrupt enable, reference voltage 2.5V, multiple conversion
 	//Adjust the sampling time! For the moment 16x ADCCLKs
-	ADC10DTC1 = BIT1;                         // 2 conversions
-	ADC10AE0 |= BIT0;                         // P2.0 ADC option select
-	ADC10AE1 |= BIT0;                         // P2.1 ADC option select
+	ADC10CTL0 = ADC10SHT_3 + MSC + REFON + SREF_1 + ADC10ON + ADC10IE; // ADC10ON, interrupt enable, reference voltage 2.5V, multiple conversion
+		//Adjust the sampling time! For the moment 16x ADCCLKs
+	ADC10DTC0 = ADC10CT;
+	ADC10DTC1 = 0x02;                         // 2 conversions
+	ADC10AE0 |= 0x03;                    // P2.0 and P2.1 ADC option select
+	//ADC10AE1 |= BIT0;                         // P2.1 ADC option select
 }
 //void setup_I2C
 //{
@@ -183,4 +188,60 @@ void send_blocks(unsigned int res_[2])
     send_byte(buf_1);
     send_byte(buf_2);
     send_byte(buf_3);
+}
+void send_blocks_dbg(unsigned int res_[2])
+//<-- Send four 1 byte packages
+{
+	unsigned char buf_0, buf_1, buf_2, buf_3;
+	buf_0 = 0b11000000;				//Send the lowest 6 bits of voltage ADC. 2 MSB=0
+	buf_1 = 0b11000000;				//Send the highest 6 bits of voltage ADC. 2 MSB=1
+	buf_2 = 0b11000000;				//Send the lowest 6 bits of current ADC. 2 MSB=2
+	buf_3 = 0b11000000;				//Send the highest 6 bits of current ADC. 2 MSB=3
+	int temp_0 = res_[1];			//Voltage buffer
+	int temp_1 = res_[0];			//Current buffer
+	volatile unsigned int i;
+    for (i=0; i<10; i++)			//Convert to binary 6 lowest bits
+    {
+        if (i<6)
+        	{
+        	buf_0 += temp_0%2*(int)pow(2,i);
+        	buf_2 += temp_1%2*(int)pow(2,i);
+        	}
+        else
+        {
+        	buf_1 += temp_0%2*(int)pow(2,i-6);
+        	buf_3 += temp_1%2*(int)pow(2,i-6);
+        }
+        temp_0 /= 2;
+        temp_1 /= 2;
+    }
+
+    println("start");
+    send_binaryln(buf_0);
+    send_binaryln(buf_1);
+    send_binaryln(buf_2);
+    send_binaryln(buf_3);
+    println("stop");
+
+}
+
+void send_binaryln(int a)
+{
+    int temp;
+    int rev=a;
+    int dummy =a;
+/*     while (dummy)
+       {
+          rev = rev * 2;
+          rev = rev + dummy%2;
+          dummy = dummy/2;
+       }
+*/    while(rev)
+    {
+        temp=rev%2;
+        send_byte(0x30+temp);
+        rev /=2;
+    }
+     send_byte('\n');
+     send_byte('\r');
 }
