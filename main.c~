@@ -193,9 +193,9 @@ void send_blocks_dbg(unsigned int res_[2])
 //<-- Send four 1 byte packages
 {
 	unsigned char buf_0, buf_1, buf_2, buf_3;
-	buf_0 = 0b00000000;				//Send the lowest 6 bits of voltage ADC. 2 MSB=0
-	buf_1 = 0b01000000;				//Send the highest 6 bits of voltage ADC. 2 MSB=1
-	buf_2 = 0b10000000;				//Send the lowest 6 bits of current ADC. 2 MSB=2
+	buf_0 = 0b11000000;				//Send the lowest 6 bits of voltage ADC. 2 MSB=0
+	buf_1 = 0b11000000;				//Send the highest 6 bits of voltage ADC. 2 MSB=1
+	buf_2 = 0b11000000;				//Send the lowest 6 bits of current ADC. 2 MSB=2
 	buf_3 = 0b11000000;				//Send the highest 6 bits of current ADC. 2 MSB=3
 	int temp_0 = res_[1];			//Voltage buffer
 	int temp_1 = res_[0];			//Current buffer
